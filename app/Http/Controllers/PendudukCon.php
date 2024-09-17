@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use App\Exports\PendudukExport;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use Maatwebsite\Excel\Facades\Excel;
 
 class PendudukCon extends Controller
 {
@@ -20,7 +19,11 @@ class PendudukCon extends Controller
 
     public function export()
     {
-        return Excel::download(new PendudukExport, 'penduduk.xlsx');
+        $export = new PendudukExport();
+        $fileName = $export->export();
+
+        // Mengunduh file
+        return response()->download(public_path($fileName))->deleteFileAfterSend(true);
     }
 
     public function index()
