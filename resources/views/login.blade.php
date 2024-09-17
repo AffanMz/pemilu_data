@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-        <script src="https://cdn.tailwindcss.com"></script>
 
-    @vite(['resources/css/app.css','resources/js/app.js'])
+    @include('css-js')
     <title>Login</title>
 </head>
 <body>
