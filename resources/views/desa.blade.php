@@ -6,9 +6,36 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Data TPS</title>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-    @include('css-js')
+    <link rel="stylesheet" href="{{ asset('build/assets/app-7KWvDcDT.css') }}">
 </head>
 <body>
+
+    @php
+        use App\Models\Penduduk;
+        use App\Models\Kelurahan;
+        use App\Models\Kecamatan;
+        use App\Models\Desa;
+
+        $id_tugas = auth()->user()->id_tugas;
+        $idkel = [];
+        $jumlah = 0;
+        if (auth()->user()->status == 'editor') {
+            $datkel = Kelurahan::where('id_kecamatan', $id_tugas)->get();
+            foreach ($datkel as $key) {
+                $idkel[] = $key->id;
+            }
+            foreach ($desa as $des){
+                if (in_array($des->id_kelurahan, $idkel)){
+                    $jumlah++;
+                }
+            }
+        }elseif (auth()->user()->status == 'viewer') {
+            $id_baru = Kelurahan::find(auth()->user()->id_tugas);
+            $id_camat = $id_baru->id_kecamatan;
+        }
+    @endphp
+
+
     <x-nav_side>
 
     </x-nav_side>
@@ -29,14 +56,28 @@
 
             <div class="flex flex-col border p-4 rounded-lg  min-h-[25rem] mb-4 rounde dark:bg-gray-800">
                 <form class="w-full flex gap-3 flex-row pb-4">
-                    <select id="kecamatan-select" class="bg-gray-50 w-1/3 lg:w-1/6 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                        <option selected value="">Pilih Kecamatan</option>
+                    <select id="kecamatan-select" {{ auth()->user()->status == 'admin' ? '' : 'disabled'  }} class="bg-gray-50 w-1/3 lg:w-1/6 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="" {{ auth()->user()->status == 'admin' ? 'selected' : '' }} >Pilih Kecamatan</option>
                         @foreach ($kecamatan as $kec)
-                            <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                            @if (auth()->user()->status == 'admin')
+                                <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                            @elseif (auth()->user()->status == 'editor')
+                                @if (auth()->user()->id_tugas == $kec->id)
+                                    <option selected value="{{ $kec->id }}">Kec. {{ $kec->name }}</option>
+                                @else
+                                    <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                @endif
+                            @else
+                                @if ($id_camat == $kec->id)
+                                    <option selected value="{{ $kec->id }}">Kec. {{ $kec->name }}</option>
+                                @else
+                                    <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                @endif
+                            @endif
                         @endforeach
                     </select>
                     <select id="kelurahan-select" class="bg-gray-50 w-1/3 lg:w-1/6 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                        <option selected value="">Pilih Kelurahan</option>
+                        <option selected value="{{ auth()->user()->status == 'viewer' ? auth()->user()->id_tugas : '' }}">Pilih Kelurahan</option>
                     </select>
                     @if (session('success'))
                         <div id="alert-3" class="flex items-center p-2 text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
@@ -58,7 +99,7 @@
                 </form>
                 <div class="w-full border-t mb-4"></div>
                 <h3 class="text-base ml-3 mb-3 dark:text-white">
-                    Total data : <span id="total-desa" class="font-semibold text-gray-600 dark:text-white">{{ count($desa) }} TPS</span>
+                    Total data : <span id="total-desa" class="font-semibold text-gray-600 dark:text-white">{{ auth()->user()->status != 'editor' ? count($desa) : $jumlah }} TPS</span>
                 </h3>
                 <div class="w-full rounded-lg overflow-x-auto">
                     <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
@@ -70,31 +111,70 @@
                                 <th scope="col" class="px-6 py-3">
                                     TPS
                                 </th>
+                                @if(auth()->user()->status == 'admin' || auth()->user()->status == 'editor')
                                 <th scope="col" class="px-6 py-3">
                                     Aksi
                                 </th>
+                                @endif
                             </tr>
                         </thead>
+                        <tbody id="desa-tbody-real"></tbody>
                         <tbody id="desa-tbody">
-                            @foreach ( $desa as $des )
-                                <tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">
-                                    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                        {{ $loop->iteration }}
-                                    </th>
-                                    <td class="px-6 py-4">
-                                        {{ $des->name }}
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <button data-modal-target="editModal-{{ $des->id }}" data-modal-toggle="editModal-{{ $des->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
-                                        
-                                        <form action="{{ route('desa.destroy', $des->id) }}" method="POST" style="display:inline-block;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
+                            @if (auth()->user()->status == 'editor')
+                                @php
+                                    $urut = 0;
+                                @endphp
+                                @foreach ( $desa as $des )
+                                    @if (in_array($des->id_kelurahan, $idkel))
+                                        <tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">
+                                            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                                {{ $loop->iteration - $urut }}
+                                            </th>
+                                            <td class="px-6 py-4">
+                                                {{ $des->name }}
+                                            </td>
+                                            @if(auth()->user()->status == 'admin' || auth()->user()->status == 'editor')
+                                            <td class="px-6 py-4">
+                                                <button data-modal-target="editModal-{{ $des->id }}" data-modal-toggle="editModal-{{ $des->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
+                                                
+                                                <form action="{{ route('desa.destroy', $des->id) }}" method="POST" style="display:inline-block;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
+                                                </form>
+                                            </td>
+                                            @endif
+                                        </tr> 
+                                    @else
+                                        @php
+                                            $urut++;
+                                        @endphp
+                                        @continue
+                                    @endif
+                                @endforeach
+                            @else
+                                @foreach ( $desa as $des )
+                                    <tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">
+                                        <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                            {{ $loop->iteration }}
+                                        </th>
+                                        <td class="px-6 py-4">
+                                            {{ $des->name }}
+                                        </td>
+                                        @if(auth()->user()->status == 'admin' || auth()->user()->status == 'editor')
+                                        <td class="px-6 py-4">
+                                            <button data-modal-target="editModal-{{ $des->id }}" data-modal-toggle="editModal-{{ $des->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
+                                            
+                                            <form action="{{ route('desa.destroy', $des->id) }}" method="POST" style="display:inline-block;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
+                                            </form>
+                                        </td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                            @endif
                         </tbody>
                     </table>
                 </div>
@@ -103,6 +183,7 @@
     </div>
 
     @foreach ($desa as $des)
+        <button data-modal-target="editModal-{{ $des->id }}" data-modal-toggle="editModal-{{ $des->id }}" class="hidden font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
         <div id="editModal-{{ $des->id }}" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div class="relative p-4 w-full max-w-2xl max-h-full">
                 <!-- Modal content -->
@@ -161,10 +242,24 @@
                     <form action="{{ route('desa.store') }}" method="POST">
                         @csrf
                         <div class="relative z-0 w-full mb-3 group">
-                            <select id="modal-kecamatan-select" name="kec" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                <option selected value="">Pilih Kecamatan</option>
+                            <select id="modal-kecamatan-select" name="kec" {{ auth()->user()->status == 'admin' ? '' : 'disabled' }} class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <option value="" {{ auth()->user()->status == 'admin' ? 'selected' : '' }} >Pilih Kecamatan</option>
                                 @foreach ($kecamatan as $kec)
-                                    <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                    @if (auth()->user()->status == 'admin')
+                                        <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                    @elseif (auth()->user()->status == 'editor')
+                                        @if (auth()->user()->id_tugas == $kec->id)
+                                            <option selected value="{{ $kec->id }}">Kec. {{ $kec->name }}</option>
+                                        @else
+                                            <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                        @endif
+                                    @else
+                                        @if ($id_camat == $kec->id)
+                                            <option selected value="{{ $kec->id }}">Kec. {{ $kec->name }}</option>
+                                        @else
+                                            <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                        @endif
+                                    @endif
                                 @endforeach
                             </select>
                         </div>
@@ -192,7 +287,12 @@
 </body>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+@if (auth()->user()->status == 'admin')
     <script>
+        var status = "{{ auth()->user()->status }}";
+        var pentol = "{{ count($desa) }}";
+
         $(document).ready(function() {
             // Disable select kelurahan on load
             $('#kelurahan-select').prop('disabled', true);
@@ -206,7 +306,7 @@
                     $('#kelurahan-select').prop('disabled', false);
 
                     // Ambil data kelurahan berdasarkan kecamatan yang dipilih
-                    console.log(kecamatanID);
+                    
                     
                     $.ajax({
                         url: '/kelurahan/kecamatan/' + kecamatanID,
@@ -231,23 +331,35 @@
                             $('#desa-tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
                             
                             var totalDesa = 0; // Variabel untuk menghitung total desa
+
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                            '<td class="px-6 py-4">' +
+                                                '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                
+                                                '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                    '@csrf' +
+                                                    '@method("DELETE")' +
+                                                    '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                '</form>' +
+                                            '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '</tr>');
+                                });
+                            }
                             
-                            $.each(data, function(key, desa) {
-                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
-                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
-                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
-                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
-                                        '<td class="px-6 py-4">' +
-                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
-                                            
-                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
-                                                '@csrf' +
-                                                '@method("DELETE")' +
-                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
-                                            '</form>' +
-                                        '</td>' +
-                                    '</tr>');
-                            });
+                            
                             document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
                                 const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
 
@@ -280,7 +392,7 @@
             $('#kelurahan-select').on('change', function() {
                 var kelurahanID = $(this).val();
                 
-                console.log(kelurahanID);
+                
                 
                 if (kelurahanID) {
                     // Ambil data desa berdasarkan kelurahan yang dipilih
@@ -293,22 +405,32 @@
                             
                             var totalDesa = 0; // Variabel untuk menghitung total desa
                             
-                            $.each(data, function(key, desa) {
-                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
-                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
-                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
-                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
-                                        '<td class="px-6 py-4">' +
-                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
-                                            
-                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
-                                                '@csrf' +
-                                                '@method("DELETE")' +
-                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
-                                            '</form>' +
-                                        '</td>' +
-                                    '</tr>');
-                            });
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                            '<td class="px-6 py-4">' +
+                                                '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                
+                                                '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                    '@csrf' +
+                                                    '@method("DELETE")' +
+                                                    '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                '</form>' +
+                                            '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '</tr>');
+                                });
+                            }
                             document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
                                 const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
 
@@ -364,6 +486,444 @@
             }
         });
     </script>
+
+@elseif (auth()->user()->status == 'editor')
+    <script>
+        var status = "{{ auth()->user()->status }}";
+        var pentol = "{{ count($desa) }}";
+        var id_kec = "{{ auth()->user()->id_tugas }}";
+        var jumlahdes = "{{ auth()->user()->status == 'editor' ? $jumlah : count($desa)}}";
+
+        $(document).ready(function() {
+            
+            $('#kelurahan-select').prop('disabled', false);
+            var kecamatanID = $('#kecamatan-select').val();            
+            var totalDesa = 0;
+            if (kecamatanID) {
+                // Aktifkan select kelurahan
+                $('#kelurahan-select').prop('disabled', false);
+                $.ajax({
+                    url: '/kelurahan/kecamatan/' + kecamatanID,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#kelurahan-select').empty().append('<option selected value="">Pilih Kelurahan</option>'); // Kosongkan select kelurahan
+
+                        $.each(data, function(key, kelurahan) {
+                            $('#kelurahan-select').append('<option value="' + kelurahan.id + '">' + kelurahan.name + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: '/desa/all',
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#desa-tbody').hide(); // Kosongkan tabel sebelum menampilkan data baru
+                        $('#desa-tbody-real').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                        
+                        var totalDesa = 0; // Variabel untuk menghitung total desa
+
+                        if (status == 'admin' || status == 'editor') {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody-real').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                            
+                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                '@csrf' +
+                                                '@method("DELETE")' +
+                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                            '</form>' +
+                                        '</td>' +
+                                    '</tr>');
+                            });
+                        } else {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody-real').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                    '</tr>');
+                            });
+                        }
+                        
+                        
+                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                            if (modalTargetEl) {
+                                modalToggleEl.addEventListener('click', function() {
+                                    const modal = new Modal(modalTargetEl);
+                                    modal.show();
+
+                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                        closeButtonEl.addEventListener('click', function() {
+                                            modal.hide();
+                                        });
+                                    });
+                                });
+                            }
+                        });
+                        // Perbarui jumlah total desa yang tampil
+                        $('#total-desa').text(totalDesa + ' TPS');
+                    }
+                });
+                $('#total-desa').text(totalDesa + ' TPS');
+                $('#kelurahan-select').empty().append('<option selected value="">Pilih Kelurahan</option>'); // Kosongkan kelurahan
+                $('#kelurahan-select').prop('disabled', true);
+                $('#desa-tbody').hide(); // Kosongkan tabel desa
+            }
+
+
+            // Ketika Kelurahan dipilih
+            $('#kelurahan-select').on('change', function() {
+                var kelurahanID = $(this).val();
+                if (kelurahanID) {
+                    // Ambil data desa berdasarkan kelurahan yang dipilih
+                    $.ajax({
+                        url: '/desa/kelurahan/' + kelurahanID,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $('#desa-tbody').hide(); // Kosongkan tabel sebelum menampilkan data baru
+                            $('#desa-tbody-real').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                            
+                            var totalDesa = 0; // Variabel untuk menghitung total desa
+                            
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody-real').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                            '<td class="px-6 py-4">' +
+                                                '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                
+                                                '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                    '@csrf' +
+                                                    '@method("DELETE")' +
+                                                    '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                '</form>' +
+                                            '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, desa) {
+                                    totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                    $('#desa-tbody-real').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '</tr>');
+                                });
+                            }
+                            document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                                const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                                if (modalTargetEl) {
+                                    modalToggleEl.addEventListener('click', function() {
+                                        const modal = new Modal(modalTargetEl);
+                                        modal.show();
+
+                                        // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                        modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                            closeButtonEl.addEventListener('click', function() {
+                                                modal.hide();
+                                            });
+                                        });
+                                    });
+                                }
+                            });
+
+                            // Perbarui jumlah total desa yang tampil
+                            $('#total-desa').text(totalDesa + ' TPS');
+                        }
+                    });
+                } else {
+                    $('#total-desa').text(jumlahdes + ' TPS');
+                    $('#desa-tbody-real').empty();
+                    $('#desa-tbody').show();
+                }
+            });
+        });
+
+
+        var kecamatanID = $('#modal-kecamatan-select').val();
+        
+        if (kecamatanID) {
+            // Aktifkan select kelurahan di modal
+            $('#modal-kelurahan-select').prop('disabled', false);
+            $('#modal-kelurahan-select').empty().append('<option selected value="">Pilih Kelurahan</option>');
+
+            // Ambil data kelurahan berdasarkan kecamatan yang dipilih
+            $.ajax({
+                url: '/kelurahan/kecamatan/' + kecamatanID,
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    $.each(data, function(key, kelurahan) {
+                        $('#modal-kelurahan-select').append('<option value="' + kelurahan.id + '">' + kelurahan.name + '</option>');
+                    });
+                }
+            });
+        } else {
+            // Jika tidak ada kecamatan yang dipilih
+            $('#modal-kelurahan-select').prop('disabled', true).empty().append('<option selected value="">Pilih Kelurahan</option>');
+        }
+    </script>
+@else
+    <script>
+        $('#desa-tbody').empty();
+        $('#total-desa').text('0 TPS');
+        var status = "{{ auth()->user()->status }}";
+        var pentol = "{{ count($desa) }}";
+        var id_kec = "{{ $id_camat }}";
+        var tugas = "{{ auth()->user()->id_tugas }}";
+
+
+        $(document).ready(function() {
+            var kecamatanID = $('#kecamatan-select').val();            
+            var totalDesa = 0;
+            if (kecamatanID) {
+                // Aktifkan select kelurahan
+                $('#kelurahan-select').prop('disabled', true);
+                $.ajax({
+                    url: '/kelurahan/kecamatan/' + kecamatanID,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $.each(data, function(key, kelurahan) {
+                            if (kelurahan.id == tugas) {
+                                $('#kelurahan-select').append('<option selected value="' + kelurahan.id + '">' + kelurahan.name + '</option>');
+                            } else {
+                                
+                            }
+                        });
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: '/desa/all',
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#desa-tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                        
+                        var totalDesa = 0; // Variabel untuk menghitung total desa
+
+                        if (status == 'admin' || status == 'editor') {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                            
+                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                '@csrf' +
+                                                '@method("DELETE")' +
+                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                            '</form>' +
+                                        '</td>' +
+                                    '</tr>');
+                            });
+                        } else {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                    '</tr>');
+                            });
+                        }
+                        
+                        
+                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                            if (modalTargetEl) {
+                                modalToggleEl.addEventListener('click', function() {
+                                    const modal = new Modal(modalTargetEl);
+                                    modal.show();
+
+                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                        closeButtonEl.addEventListener('click', function() {
+                                            modal.hide();
+                                        });
+                                    });
+                                });
+                            }
+                        });
+                        // Perbarui jumlah total desa yang tampil
+                        $('#total-desa').text(totalDesa + ' TPS');
+                    }
+                });
+                $('#total-desa').text(totalDesa + ' TPS');
+                $('#kelurahan-select').empty().append('<option selected value="">Pilih Kelurahan</option>'); // Kosongkan kelurahan
+                $('#kelurahan-select').prop('disabled', true);
+                $('#desa-tbody').empty(); // Kosongkan tabel desa
+            }
+
+
+            var kelurahanID = $('#kelurahan-select').val();
+            if (kelurahanID) {
+                // Ambil data desa berdasarkan kelurahan yang dipilih
+                $.ajax({
+                    url: '/desa/kelurahan/' + kelurahanID,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#desa-tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                        
+                        var totalDesa = 0; // Variabel untuk menghitung total desa
+                        
+                        if (status == 'admin' || status == 'editor') {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                            
+                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                '@csrf' +
+                                                '@method("DELETE")' +
+                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                            '</form>' +
+                                        '</td>' +
+                                    '</tr>');
+                            });
+                        } else {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                    '</tr>');
+                            });
+                        }
+                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                            if (modalTargetEl) {
+                                modalToggleEl.addEventListener('click', function() {
+                                    const modal = new Modal(modalTargetEl);
+                                    modal.show();
+
+                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                        closeButtonEl.addEventListener('click', function() {
+                                            modal.hide();
+                                        });
+                                    });
+                                });
+                            }
+                        });
+
+                        // Perbarui jumlah total desa yang tampil
+                        $('#total-desa').text(totalDesa + ' TPS');
+                    }
+                });
+            } else {
+                // Jika opsi "Pilih Kelurahan" dipilih kembali, kosongkan tabel desa
+                $.ajax({
+                    url: '/desa/all',
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#desa-tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                        
+                        var totalDesa = 0; // Variabel untuk menghitung total desa
+
+                        if (status == 'admin' || status == 'editor') {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                            '<button data-modal-target="editModal-' + desa.id + '" data-modal-toggle="editModal-' + desa.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                            
+                                            '<form action="/desa/destroy/' + desa.id + '" method="POST" style="display:inline-block;">' +
+                                                '@csrf' +
+                                                '@method("DELETE")' +
+                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                            '</form>' +
+                                        '</td>' +
+                                    '</tr>');
+                            });
+                        } else {
+                            $.each(data, function(key, desa) {
+                                totalDesa++; // Tambahkan 1 setiap kali desa ditemukan
+                                $('#desa-tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                    '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                    '<td class="px-6 py-4">' + desa.name + '</td>' +
+                                    '</tr>');
+                            });
+                        }
+                        
+                        
+                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                            if (modalTargetEl) {
+                                modalToggleEl.addEventListener('click', function() {
+                                    const modal = new Modal(modalTargetEl);
+                                    modal.show();
+
+                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                        closeButtonEl.addEventListener('click', function() {
+                                            modal.hide();
+                                        });
+                                    });
+                                });
+                            }
+                        });
+                        // Perbarui jumlah total desa yang tampil
+                        $('#total-desa').text(totalDesa + ' TPS');
+                    }
+                });
+            }
+
+        });
+
+
+        var kecamatanID = $('#modal-kecamatan-select').val();
+        console.log(kecamatanID);
+        console.log(tugas);
+        if (kecamatanID) {
+            // Aktifkan select kelurahan di modal
+            $('#modal-kelurahan-select').prop('disabled', false);
+            $('#modal-kelurahan-select').empty();
+
+            // Ambil data kelurahan berdasarkan kecamatan yang dipilih
+            $.ajax({
+                url: '/kelurahan/kecamatan/' + kecamatanID,
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    $.each(data, function(key, kelurahan) {
+                        if (kelurahan.id == tugas) {
+                            $('#modal-kelurahan-select').append('<option selected value="' + kelurahan.id + '">' + kelurahan.name + '</option>');
+                        } 
+                    });
+                }
+            });
+        } else {
+            // Jika tidak ada kecamatan yang dipilih
+            $('#modal-kelurahan-select').prop('disabled', true).empty().append('<option selected value="">Pilih Kelurahan</option>');
+        }
+    </script>
+@endif
 
 
 </html>

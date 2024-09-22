@@ -18,9 +18,21 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'status',
+        'id_tugas',
         'email',
         'password',
     ];
+
+    public function kecamatan($id_tugas)
+    {
+        $id = Kecamatan::find($id_tugas);
+    }
+
+    public function kelurahan($id_tugas)
+    {
+        $id = Kecamatan::find($id_tugas);
+    }
 
     /**
      * The attributes that should be hidden for serialization.

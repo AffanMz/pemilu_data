@@ -1,20 +1,23 @@
 <?php
 
 use App\Http\Controllers\DesaCon;
+use App\Http\Controllers\UserCon;
 use App\Http\Controllers\LoginCon;
+use App\Http\Middleware\AdminStatus;
 use App\Http\Controllers\PendudukCon;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\KecamatanCon;
 use App\Http\Controllers\KelurahanCon;
 
+Route::get('/', [LoginCon::class, 'showLoginForm'])->name('index');
 Route::get('/login', [LoginCon::class, 'showLoginForm'])->name('login')->middleware('guest');
 Route::post('/login/auth', [LoginCon::class, 'login'])->name('login.auth')->middleware('guest');
 Route::get('/logout', [LoginCon::class, 'logout'])->name('logout')->middleware('auth');
-Route::get('export-penduduk', [PendudukCon::class, 'export'])->name('export.penduduk')->middleware('auth');
-
-Route::get('/', [LoginCon::class, 'showLoginForm'])->name('index');
 
 
+Route::get('export-penduduk/{kec}', [PendudukCon::class, 'exportkec'])->name('export.kec');
+Route::get('export-penduduk/{kec}/{kel}', [PendudukCon::class, 'exportkel'])->name('export.kel');
+Route::get('export-penduduk/{kec}/{kel}/{tps}', [PendudukCon::class, 'exporttps'])->name('export.tps');
 Route::get('/penduduk' , [PendudukCon::class,'index'])->name('penduduk')->middleware('auth');
 Route::post('/penduduk/store' , [PendudukCon::class,'store'])->name('penduduk.store')->middleware('auth');
 Route::get('/penduduk/desa/{id}' , [PendudukCon::class,'filltps'])->name('penduduk.filltps')->middleware('auth');
@@ -42,4 +45,16 @@ Route::get('/kelurahan/kecamatan/{id}', [KelurahanCon::class, 'fillkec'])->name(
 Route::get('/kelurahan/all', [KelurahanCon::class, 'allkel'])->name('kelurahan.allkel')->middleware('auth');
 Route::delete('/kelurahan/destroy/{id}', [KelurahanCon::class, 'destroy'])->name('kelurahan.destroy')->middleware('auth');
 Route::post('/kelurahan/update/{id}', [KelurahanCon::class, 'update'])->name('kelurahan.update')->middleware('auth');
+
+
+Route::middleware(['auth', AdminStatus::class . ':admin'])->group(function () {
+    Route::get('export-penduduk', [PendudukCon::class, 'export'])->name('export.penduduk')->middleware('auth');
+    Route::get('logdata', [UserCon::class, 'logdata'])->name('logdata')->middleware('auth');
+    Route::get('/user' , [UserCon::class,'index'])->name('user')->middleware('auth');
+    Route::get('/user/kecamatan' , [UserCon::class,'allkec'])->name('allkec')->middleware('auth');
+    Route::post('/user/store' , [UserCon::class,'store'])->name('user.store')->middleware('auth');
+    Route::delete('/user/destroy/{id}', [UserCon::class, 'destroy'])->name('user.destroy')->middleware('auth');
+    Route::post('/user/update/{id}', [UserCon::class, 'update'])->name('user.update')->middleware('auth');
+});
+
 

@@ -6,13 +6,13 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Data Kecamatan</title>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-    @include('css-js')
+    <link rel="stylesheet" href="{{ asset('build/assets/app-7KWvDcDT.css') }}">
 </head>
 <body>
-
     @php
         use App\Models\Penduduk;
         use App\Models\Kelurahan;
+        use App\Models\Kecamatan;
         use App\Models\Desa;
     @endphp
     
@@ -98,9 +98,11 @@
                                     Jumlah
                                     Penduduk
                                 </th>
-                                <th scope="col" class="px-6 py-3">
-                                    Aksi
-                                </th>
+                                @if(auth()->user()->status == 'admin' || auth()->user()->status == 'admin')
+                                    <th scope="col" class="px-6 py-3">
+                                        Aksi
+                                    </th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -140,15 +142,20 @@
                                     <td class="px-6 py-4">
                                         {{ count($idpendu) }}
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <button data-modal-target="editModal-{{ $kec->id }}" data-modal-toggle="editModal-{{ $kec->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
+                                    @if(auth()->user()->status == 'admin' || auth()->user()->status == 'admin')
+                                        <td class="px-6 py-4">
+                                            <button data-modal-target="editModal-{{ $kec->id }}" data-modal-toggle="editModal-{{ $kec->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
+                                            
+                                            <form action="{{ route('kecamatan.destroy', $kec->id) }}" method="POST" style="display:inline-block;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
+                                            </form>
+                                        </td>
+                                    @else
                                         
-                                        <form action="{{ route('kecamatan.destroy', $kec->id) }}" method="POST" style="display:inline-block;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
-                                        </form>
-                                    </td>
+                                    @endif
+                                    
                                 </tr>
                             @endforeach
                         </tbody>

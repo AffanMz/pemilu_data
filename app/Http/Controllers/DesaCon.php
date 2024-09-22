@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Desa;
+use App\Models\Logdata;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class DesaCon extends Controller
 {
@@ -16,10 +18,17 @@ class DesaCon extends Controller
     
     public function index()
     {
-        $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
-        $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
-        $data['desa'] = Desa::orderBy('name', 'asc')->get();
-        return view('desa', $data);
+        if (Auth::user()->status == 'admin' || Auth::user()->status == 'viewer') {
+            $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
+            $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
+            $data['desa'] = Desa::orderBy('name', 'asc')->get();
+            return view('desa', $data);
+        } elseif (Auth::user()->status == 'editor') {
+            $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
+            $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
+            $data['desa'] = Desa::orderBy('name', 'asc')->get();
+            return view('desa', $data);
+        }
     }
 
     public function fillkec($id)
@@ -58,14 +67,18 @@ class DesaCon extends Controller
     public function store(Request $request)
     {
         // Validasi input
-        $request->validate([
-            'name' => 'required|string|max:255|unique:desa,name', // Cek duplikasi nama
-        ]);
 
         // Menyimpan data ke dalam tabel kecamatan menggunakan create()
         Desa::create([
             'id_kelurahan' => $request->kel,
             'name' => $request->name,
+        ]);
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menambahkan Data TPS '. $request->name . '',
         ]);
 
         // Redirect atau response setelah berhasil menyimpan data
@@ -85,15 +98,19 @@ class DesaCon extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:desa,name', // Cek duplikasi nama
-        ]);
         // Update data item
         $item = Desa::find($id);
         $item->update([
             'id_kelurahan' => $request->kel,
             'name' => $request->name,
         ]); 
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Mengupdate Data TPS '. $request->name . '',
+        ]);
 
         // Redirect kembali ke halaman list item
         return redirect()->route('desa')->with('success', 'TPS berhasil diupdate');
@@ -106,6 +123,13 @@ class DesaCon extends Controller
     {
         $item = Desa::find($id);
         $item->delete();
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menghapus Data TPS '. $item->name . '',
+        ]);
 
         return redirect()->route('desa')->with('success', 'TPS berhasil dihapus');
     }

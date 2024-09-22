@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
 
-    @include('css-js')
+    <link rel="stylesheet" href="{{ asset('build/assets/app-7KWvDcDT.css') }}">
     <title>Login</title>
 </head>
 <body>

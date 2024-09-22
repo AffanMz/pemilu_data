@@ -6,12 +6,20 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Data Kelurahan</title>
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.css" rel="stylesheet" />
-    @include('css-js')
+    <link rel="stylesheet" href="{{ asset('build/assets/app-7KWvDcDT.css') }}">
 </head>
 <body>
+    @php
+        use App\Models\Penduduk;
+        use App\Models\Kelurahan;
+        use App\Models\Kecamatan;
+        use App\Models\Desa;
+    @endphp
+
     <x-nav_side>
 
     </x-nav_side>
+
 
     <div class="flex flex-col p-4 pt-20 lg:ml-64">
         <div class="flex flex-col mt-4 rounded-lg dark:border-gray-700">
@@ -30,10 +38,18 @@
 
             <div class="flex flex-col border p-4 rounded-lg  min-h-[25rem] mb-4 rounde dark:bg-gray-800">
                 <form class="w-full flex gap-3 flex-row pb-4">
-                    <select id="kecamatan-select" class="bg-gray-50 w-1/3 lg:1/6 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                        <option selected value="">Pilih Kecamatan</option>
+                    <select id="kecamatan-select" {{ auth()->user()->status == 'admin' ? '' : 'disabled' }} class="bg-gray-50 w-1/3 lg:1/6 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="" {{ auth()->user()->status == 'admin' ? 'selected' : '' }} >Pilih Kecamatan</option>
                         @foreach ($kecamatan as $kec)
-                            <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                            @if (auth()->user()->status == 'admin')
+                                <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                            @else
+                                @if (auth()->user()->id_tugas == $kec->id)
+                                    <option selected value="{{ $kec->id }}">Kecamatan {{ $kec->name }}</option>
+                                @else
+                                    <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                @endif
+                            @endif
                         @endforeach
                     </select>
                 </form>
@@ -68,9 +84,11 @@
                                 <th scope="col" class="px-6 py-3">
                                     Kelurahan/Desa
                                 </th>
-                                <th scope="col" class="px-6 py-3">
-                                    Aksi
-                                </th>
+                                @if (auth()->user()->status == 'admin' || auth()->user()->status == 'editor')
+                                    <th scope="col" class="px-6 py-3">
+                                        Aksi
+                                    </th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -82,15 +100,17 @@
                                     <td class="px-6 py-4">
                                         {{ $kel->name }}
                                     </td>
-                                    <td>
-                                        <button   button data-modal-target="editModal-{{ $kel->id }}" data-modal-toggle="editModal-{{ $kel->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
-                                        
-                                        <form action="{{ route('kelurahan.destroy', $kel->id) }}" method="POST" style="display:inline-block;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
-                                        </form>
-                                    </td>
+                                    @if (auth()->user()->status == 'admin' || auth()->user()->status == 'editor')
+                                        <td>
+                                            <button data-modal-target="editModal-{{ $kel->id }}" data-modal-toggle="editModal-{{ $kel->id }}" class="font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
+                                            
+                                            <form action="{{ route('kelurahan.destroy', $kel->id) }}" method="POST" style="display:inline-block;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm('Are you sure you want to delete this item?')">Hapus</button>
+                                            </form>
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
@@ -103,6 +123,7 @@
     @foreach ($kelurahan as $kel)
         <div id="editModal-{{ $kel->id }}" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div class="relative p-4 w-full max-w-2xl max-h-full">
+                <button data-modal-target="editModal-{{ $kel->id }}" data-modal-toggle="editModal-{{ $kel->id }}" class="hidden font-medium mr-1 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>
                 <!-- Modal content -->
                 <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
                     <!-- Modal header -->
@@ -158,10 +179,18 @@
                     <form action="{{ route('kelurahan.store') }}" method="POST">
                         @csrf
                         <div class="relative z-0 w-full mb-3 group">
-                            <select id="kec" name="kec" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                <option selected>Pilih Kecamatan</option>
+                            <select id="kec" name="kec" {{ auth()->user()->status == 'admin' ? '' : 'disabled' }} class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <option {{ auth()->user()->status == 'admin' ? 'selected' : '' }}  value="" >Pilih Kecamatan</option>
                                 @foreach ($kecamatan as $kec)
-                                    <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                    @if (auth()->user()->status == 'admin')
+                                        <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                    @else
+                                        @if (auth()->user()->id_tugas == $kec->id)
+                                            <option selected value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                        @else
+                                            <option value="{{ $kec->id }}">{{ $kec->name }}</option>
+                                        @endif
+                                    @endif
                                 @endforeach
                             </select>
                         </div>
@@ -181,106 +210,261 @@
 </body>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#kecamatan-select').on('change', function() {
-            var kecamatanID = $(this).val();
-            console.log(kecamatanID);
-            
-            if (kecamatanID) {
-                // Jika ada kecamatan yang dipilih, tampilkan data berdasarkan kecamatan
-                $.ajax({
-                    url: '/kelurahan/kecamatan/' + kecamatanID,
-                    type: "GET",
-                    dataType: "json",
-                    success: function(data) {
-                        $('tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
-                        var totalDesa = 0;
-                        $.each(data, function(key, kelurahan) {
-                            totalDesa++;
-                            $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
-                                '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
-                                '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
-                                '<td class="px-6 py-4">' +
-                                            '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
-                                            
-                                            '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
-                                                '@csrf' +
-                                                '@method("DELETE")' +
-                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
-                                            '</form>' +
-                                        '</td>' +
-                                '</tr>');
-                        });
-                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
-                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
 
-                            if (modalTargetEl) {
-                                modalToggleEl.addEventListener('click', function() {
-                                    const modal = new Modal(modalTargetEl);
-                                    modal.show();
+@if (auth()->user()->status == 'admin')
+    <script>
+        var status = "{{ auth()->user()->status }}";            
+        var pentol = "{{ count($kelurahan) }}";
 
-                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
-                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
-                                        closeButtonEl.addEventListener('click', function() {
-                                            modal.hide();
-                                        });
-                                    });
+        $(document).ready(function() {
+            $('#kecamatan-select').on('change', function() {
+                var kecamatanID = $(this).val();
+                console.log(kecamatanID);
+                
+                if (kecamatanID) {
+                    // Jika ada kecamatan yang dipilih, tampilkan data berdasarkan kecamatan
+                    $.ajax({
+                        url: '/kelurahan/kecamatan/' + kecamatanID,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $('tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                            var totalDesa = 0;
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, kelurahan) {
+                                totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                                    '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                    
+                                                    '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
+                                                        '@csrf' +
+                                                        '@method("DELETE")' +
+                                                        '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                    '</form>' +
+                                                '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, kelurahan) {
+                                    totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                    '</tr>');
                                 });
                             }
-                        });
-                        $('#banyak').text(totalDesa + ' Kelurahan/Desa');
-                    }
-                });
-            } else {
-                // Jika opsi "Pilih Kecamatan" dipilih, tampilkan semua data kelurahan
-                $.ajax({
-                    url: '/kelurahan/all', // Route untuk mengambil semua data kelurahan
-                    type: "GET",
-                    dataType: "json",
-                    success: function(data) {
-                        $('tbody').empty(); // Kosongkan tabel sebelum menampilkan semua data
-                        var totalDesa = 0;
-                        $.each(data, function(key, kelurahan) {
-                            totalDesa++;
-                            $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
-                                '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
-                                '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
-                                '<td class="px-6 py-4">' +
-                                            '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
-                                            
-                                            '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
-                                                '@csrf' +
-                                                '@method("DELETE")' +
-                                                '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
-                                            '</form>' +
-                                        '</td>' +
-                                '</tr>');
-                        });
-                        document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
-                            const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+                            document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                                const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
 
-                            if (modalTargetEl) {
-                                modalToggleEl.addEventListener('click', function() {
-                                    const modal = new Modal(modalTargetEl);
-                                    modal.show();
+                                if (modalTargetEl) {
+                                    modalToggleEl.addEventListener('click', function() {
+                                        const modal = new Modal(modalTargetEl);
+                                        modal.show();
 
-                                    // Tambahkan event listener untuk tombol "X" dan "Cancel"
-                                    modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
-                                        closeButtonEl.addEventListener('click', function() {
-                                            modal.hide();
+                                        // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                        modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                            closeButtonEl.addEventListener('click', function() {
+                                                modal.hide();
+                                            });
                                         });
                                     });
+                                }
+                            });
+                            $('#banyak').text(totalDesa + ' Kelurahan/Desa');
+                        }
+                    });
+                } else {
+                    // Jika opsi "Pilih Kecamatan" dipilih, tampilkan semua data kelurahan
+                    $.ajax({
+                        url: '/kelurahan/all', // Route untuk mengambil semua data kelurahan
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $('tbody').empty(); // Kosongkan tabel sebelum menampilkan semua data
+                            var totalDesa = 0;
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, kelurahan) {
+                                totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                                    '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                    
+                                                    '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
+                                                        '@csrf' +
+                                                        '@method("DELETE")' +
+                                                        '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                    '</form>' +
+                                                '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, kelurahan) {
+                                    totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                    '</tr>');
                                 });
                             }
-                        });
-                        $('#banyak').text(totalDesa + ' Kelurahan/Desa');
-                    }
-                });
-            }
+                            document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                                const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                                if (modalTargetEl) {
+                                    modalToggleEl.addEventListener('click', function() {
+                                        const modal = new Modal(modalTargetEl);
+                                        modal.show();
+
+                                        // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                        modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                            closeButtonEl.addEventListener('click', function() {
+                                                modal.hide();
+                                            });
+                                        });
+                                    });
+                                }
+                            });
+                            $('#banyak').text(totalDesa + ' Kelurahan/Desa');
+                        }
+                    });
+                }
+            });
         });
-    });
-</script>
+    </script>
+    
+@elseif (auth()->user()->status == 'editor')
+    <script>
+
+        var status = "{{ auth()->user()->status }}";            
+        var pentol = "{{ count($kelurahan) }}";
+
+        $(document).ready(function() {
+            $('#kecamatan-select').on('change', function() {
+                var kecamatanID = $(this).val();
+                
+                if (kecamatanID) {
+                    // Jika ada kecamatan yang dipilih, tampilkan data berdasarkan kecamatan
+                    $.ajax({
+                        url: '/kelurahan/kecamatan/' + kecamatanID,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $('tbody').empty(); // Kosongkan tabel sebelum menampilkan data baru
+                            var totalDesa = 0;
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, kelurahan) {
+                                totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                                    '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                    
+                                                    '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
+                                                        '@csrf' +
+                                                        '@method("DELETE")' +
+                                                        '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                    '</form>' +
+                                                '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, kelurahan) {
+                                    totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                    '</tr>');
+                                });
+                            }
+                            document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                                const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                                if (modalTargetEl) {
+                                    modalToggleEl.addEventListener('click', function() {
+                                        const modal = new Modal(modalTargetEl);
+                                        modal.show();
+
+                                        // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                        modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                            closeButtonEl.addEventListener('click', function() {
+                                                modal.hide();
+                                            });
+                                        });
+                                    });
+                                }
+                            });
+                            $('#banyak').text(totalDesa + ' Kelurahan/Desa');
+                        }
+                    });
+                } else {
+                    // Jika opsi "Pilih Kecamatan" dipilih, tampilkan semua data kelurahan
+                    $.ajax({
+                        url: '/kelurahan/all', // Route untuk mengambil semua data kelurahan
+                        type: "GET",
+                        dataType: "json",
+                        success: function(data) {
+                            $('tbody').empty(); // Kosongkan tabel sebelum menampilkan semua data
+                            var totalDesa = 0;
+                            if (status == 'admin' || status == 'editor') {
+                                $.each(data, function(key, kelurahan) {
+                                totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                        '<td class="px-6 py-4">' +
+                                                    '<button data-modal-target="editModal-' + kelurahan.id + '" data-modal-toggle="editModal-' + kelurahan.id + '" class="font-medium mr-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-white">Edit</button>' +
+                                                    
+                                                    '<form action="/kelurahan/destroy/' + kelurahan.id + '" method="POST" style="display:inline-block;">' +
+                                                        '@csrf' +
+                                                        '@method("DELETE")' +
+                                                        '<button type="submit" class="font-medium p-2 bg-red-500 rounded-lg hover:bg-red-600 text-white" onclick="return confirm(\'Are you sure you want to delete this item?\')">Hapus</button>' +
+                                                    '</form>' +
+                                                '</td>' +
+                                        '</tr>');
+                                });
+                            } else {
+                                $.each(data, function(key, kelurahan) {
+                                    totalDesa++;
+                                    $('tbody').append('<tr class="bg-blue-100 border-b dark:bg-gray-800 dark:border-gray-700 font-semibold hover:bg-blue-200 dark:hover:bg-gray-600">' +
+                                        '<th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">' + (key + 1) + '</th>' +
+                                        '<td class="px-6 py-4">' + kelurahan.name + '</td>' +
+                                    '</tr>');
+                                });
+                            }
+                            document.querySelectorAll('[data-modal-toggle]').forEach(function(modalToggleEl) {
+                                const modalTargetEl = document.getElementById(modalToggleEl.getAttribute('data-modal-target'));
+
+                                if (modalTargetEl) {
+                                    modalToggleEl.addEventListener('click', function() {
+                                        const modal = new Modal(modalTargetEl);
+                                        modal.show();
+
+                                        // Tambahkan event listener untuk tombol "X" dan "Cancel"
+                                        modalTargetEl.querySelectorAll('[data-modal-hide]').forEach(function(closeButtonEl) {
+                                            closeButtonEl.addEventListener('click', function() {
+                                                modal.hide();
+                                            });
+                                        });
+                                    });
+                                }
+                            });
+                            $('#banyak').text(totalDesa + ' Kelurahan/Desa');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+@else
+
+@endif
+
+
 
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.1/dist/flowbite.min.js"></script>
 

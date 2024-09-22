@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Logdata;
 use App\Models\Kecamatan;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class KecamatanCon extends Controller
 {
@@ -30,6 +31,13 @@ class KecamatanCon extends Controller
         // Menyimpan data ke dalam tabel kecamatan menggunakan create()
         Kecamatan::create([
             'name' => $request->name,
+        ]);
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menambahkan Data Kecamatan '. $request->name . '',
         ]);
 
         // Redirect atau response setelah berhasil menyimpan data
@@ -58,6 +66,13 @@ class KecamatanCon extends Controller
             'name' => $request->name,
         ]);
 
+        $id_user = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $id_user,
+            'aktivitas' => 'Mengupdate Data Kecamatan'. $request->name,
+        ]);
+
         // Redirect kembali ke halaman list item
         return redirect()->route('kecamatan')->with('success', 'Kecamatan berhasil diupdate');
     }
@@ -69,6 +84,13 @@ class KecamatanCon extends Controller
     {
         $item = Kecamatan::find($id);
         $item->delete();
+
+        $id_user = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $id_user,
+            'aktivitas' => 'Menghapus Data Kecamatan'. $item->name,
+        ]);
 
         return redirect()->route('kecamatan')->with('success', 'Kecamatan berhasil dihapus');
     }

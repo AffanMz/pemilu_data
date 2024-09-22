@@ -67,7 +67,12 @@
         </ul>
     </div>
 </aside> --}}
-
+    @php
+        use App\Models\Penduduk;
+        use App\Models\Kelurahan;
+        use App\Models\Kecamatan;
+        use App\Models\Desa;
+    @endphp
 
 
 <nav class="border-gray-200 fixed w-full border-b bg-white dark:bg-gray-800 dark:border-gray-700">
@@ -89,10 +94,30 @@
         <div class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700 dark:divide-gray-600" id="user-dropdown">
             <div class="px-4 py-3">
                 <span class="block text-sm text-gray-900 dark:text-white">{{ auth()->user()->name }}</span>
+                @php
+                    if (auth()->user()->status == 'admin') {
+                        $wilayah = 'Semua Wilayah';
+                    } elseif (auth()->user()->status == 'editor') {
+                        $wl = Kecamatan::find(auth()->user()->id_tugas);
+                        $wilayah = $wl->name;
+                    } else {
+                        $wl = Kelurahan::find(auth()->user()->id_tugas);
+                        $wilayah = $wl->kecamatan->name . '-' . $wl->name;
+                    }
+                @endphp
+                <span class="block font-semibold text-sm text-gray-900 dark:text-white">{{ $wilayah }}</span>
             </div>
             <ul class="py-2" aria-labelledby="user-menu-button">
+                @if (auth()->user()->status == 'admin')
+                    <li>
+                        <a href="{{ route('user') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">User</a>
+                    </li>
+                    <li>
+                        <a href="{{ route('logdata') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Aktivitas</a>
+                    </li>
+                @endif
                 <li>
-                <a href="{{ route('logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Sign out</a>
+                    <a href="{{ route('logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Sign out</a>
                 </li>
             </ul>
         </div>
@@ -111,22 +136,36 @@
                 <span class="ms-3">Penduduk</span>
                 </a>
             </li>
-            <li>
-                <a href="{{ route('kecamatan') }}" class="{{ request()->routeIs('kecamatan') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
-                <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 18">
-                    <path d="M6.143 0H1.857A1.857 1.857 0 0 0 0 1.857v4.286C0 7.169.831 8 1.857 8h4.286A1.857 1.857 0 0 0 8 6.143V1.857A1.857 1.857 0 0 0 6.143 0Zm10 0h-4.286A1.857 1.857 0 0 0 10 1.857v4.286C10 7.169 10.831 8 11.857 8h4.286A1.857 1.857 0 0 0 18 6.143V1.857A1.857 1.857 0 0 0 16.143 0Zm-10 10H1.857A1.857 1.857 0 0 0 0 11.857v4.286C0 17.169.831 18 1.857 18h4.286A1.857 1.857 0 0 0 8 16.143v-4.286A1.857 1.857 0 0 0 6.143 10Zm10 0h-4.286A1.857 1.857 0 0 0 10 11.857v4.286c0 1.026.831 1.857 1.857 1.857h4.286A1.857 1.857 0 0 0 18 16.143v-4.286A1.857 1.857 0 0 0 16.143 10Z"/>
-                </svg>
-                <span class="flex-1 ms-3 whitespace-nowrap">Kecamatan</span>
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('kelurahan') }}" class="{{ request()->routeIs('kelurahan') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
-                <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z"/>
-                </svg>
-                <span class="flex-1 ms-3 whitespace-nowrap">Kelurahan/Desa</span>
-                </a>
-            </li>
+            @if (auth()->user()->status == 'admin')
+                <li>
+                    <a href="{{ route('kecamatan') }}" class="{{ request()->routeIs('kecamatan') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
+                    <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 18">
+                        <path d="M6.143 0H1.857A1.857 1.857 0 0 0 0 1.857v4.286C0 7.169.831 8 1.857 8h4.286A1.857 1.857 0 0 0 8 6.143V1.857A1.857 1.857 0 0 0 6.143 0Zm10 0h-4.286A1.857 1.857 0 0 0 10 1.857v4.286C10 7.169 10.831 8 11.857 8h4.286A1.857 1.857 0 0 0 18 6.143V1.857A1.857 1.857 0 0 0 16.143 0Zm-10 10H1.857A1.857 1.857 0 0 0 0 11.857v4.286C0 17.169.831 18 1.857 18h4.286A1.857 1.857 0 0 0 8 16.143v-4.286A1.857 1.857 0 0 0 6.143 10Zm10 0h-4.286A1.857 1.857 0 0 0 10 11.857v4.286c0 1.026.831 1.857 1.857 1.857h4.286A1.857 1.857 0 0 0 18 16.143v-4.286A1.857 1.857 0 0 0 16.143 10Z"/>
+                    </svg>
+                    <span class="flex-1 ms-3 whitespace-nowrap">Kecamatan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('kelurahan') }}" class="{{ request()->routeIs('kelurahan') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
+                    <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z"/>
+                    </svg>
+                    <span class="flex-1 ms-3 whitespace-nowrap">Kelurahan/Desa</span>
+                    </a>
+                </li>
+            @elseif (auth()->user()->status == 'editor')
+                <li>
+                    <a href="{{ route('kelurahan') }}" class="{{ request()->routeIs('kelurahan') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
+                    <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z"/>
+                    </svg>
+                    <span class="flex-1 ms-3 whitespace-nowrap">Kelurahan/Desa</span>
+                    </a>
+                </li>
+            @else
+
+            @endif
+            
             <li>
                 <a href="{{ route('desa') }}" class="{{ request()->routeIs('desa') ? 'bg-blue-200' : '' }} bg-white border-b w-full flex items-center px-5 py-5 text-gray-900 dark:text-white hover:bg-blue-200 dark:bg-gray-600 dark:hover:bg-gray-700 group">
                 <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 16">

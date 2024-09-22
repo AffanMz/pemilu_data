@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Desa;
+use App\Models\Logdata;
 use App\Models\Penduduk;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
 use Illuminate\Http\Request;
 use App\Exports\PendudukExport;
+use App\Exports\PendudukExportKec;
+use App\Exports\PendudukExportKel;
+use App\Exports\PendudukExportTps;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class PendudukCon extends Controller
 {
@@ -21,12 +26,45 @@ class PendudukCon extends Controller
     {
         $export = new PendudukExport();
         $fileName = $export->export();
-
+        
+        // Mengunduh file
+        return response()->download(public_path($fileName))->deleteFileAfterSend(true);
+    }
+    public function exportkec($kec)
+    {
+        $export = new PendudukExportKec($kec);
+        $fileName = $export->export($kec);
+        
+        // Mengunduh file
+        return response()->download(public_path($fileName))->deleteFileAfterSend(true);
+    }
+    public function exportkel($kec, $kel)
+    {
+        $export = new PendudukExportKel();
+        $fileName = $export->export($kel);
+        
+        // Mengunduh file
+        return response()->download(public_path($fileName))->deleteFileAfterSend(true);
+    }
+    public function exporttps($kec, $kel, $tps)
+    {
+        $export = new PendudukExportTps($tps);
+        $fileName = $export->export($tps);
+        
         // Mengunduh file
         return response()->download(public_path($fileName))->deleteFileAfterSend(true);
     }
 
     public function index()
+    {
+        $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
+        $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
+        $data['desa'] = Desa::orderBy('name', 'asc')->get();
+        $data['penduduk'] = Penduduk::orderBy('name', 'asc')->get();
+        return view('penduduk', $data);
+    }
+
+    public function index_viewer()
     {
         $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
         $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
@@ -84,9 +122,11 @@ class PendudukCon extends Controller
     {
         // Validasi input
         $request->validate([
-            'nik' => 'required|string|max:13|unique:penduduk,nik', // Cek duplikasi nama
+            'nik' => 'required|numeric|digits:16|unique:penduduk,nik', // Cek duplikasi nama
         ], [
-            'nik.unique' => 'NIK '. $request->nik .' Sudah Terdaftar'
+            'nik.unique' => 'NIK '. $request->nik .' Sudah Terdaftar',
+            'nik.numeric' => 'NIK '. $request->nik .' NIK Hanya Berisi Angka',
+            'nik.digits' => 'NIK '. $request->nik .' Panjang NIK  Harus 16 Digit',
         ]);
 
         // Menyimpan data ke dalam tabel kecamatan menggunakan create()
@@ -97,6 +137,13 @@ class PendudukCon extends Controller
             'alamat' => $request->alamat,
             'tl' => $request->tl,
             'jk' => $request->jk,
+        ]);
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menambahkan Data Penduduk '. $request->name . '',
         ]);
 
         // Redirect atau response setelah berhasil menyimpan data
@@ -132,6 +179,13 @@ class PendudukCon extends Controller
                 'tl' => $request->tl,
                 'jk' => $request->jk,
             ]);
+
+            $iduser = Auth::user()->id;
+
+            Logdata::create([
+                'id_user' => $iduser,
+                'aktivitas' => 'Mengupdate Data Penduduk '. $request->name . '',
+            ]);
     
             // Redirect kembali ke halaman list item
             return redirect()->route('penduduk')->with('success', 'Penduduk berhasil diupdate');
@@ -139,9 +193,11 @@ class PendudukCon extends Controller
 
         // Validasi data input
         $request->validate([
-            'nik' => 'required|string|max:13|unique:penduduk,nik', // Cek duplikasi nama
+            'nik' => 'required|numeric|digits:16|unique:penduduk,nik', // Cek duplikasi nama
         ], [
-            'nik.unique' => 'NIK '. $request->nik .' Sudah Terdaftar'
+            'nik.unique' => 'NIK '. $request->nik .' Sudah Terdaftar',
+            'nik.numeric' => 'NIK '. $request->nik .' NIK Hanya Berisi Angka',
+            'nik.digits' => 'NIK '. $request->nik .' Panjang NIK  Harus 16 Digit',
         ]);
 
         $item->update([
@@ -151,6 +207,13 @@ class PendudukCon extends Controller
             'alamat' => $request->alamat,
             'tl' => $request->tl,
             'jk' => $request->jk,
+        ]);
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Mengupdate Data Penduduk '. $request->name . '',
         ]);
 
         // Redirect kembali ke halaman list item
@@ -164,6 +227,13 @@ class PendudukCon extends Controller
     {
         $item = Penduduk::find($id);
         $item->delete();
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menghapus Data Penduduk '. $item->name . '',
+        ]);
 
         return redirect()->route('penduduk')->with('success', 'Penduduk berhasil dihapus');
     }

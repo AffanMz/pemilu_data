@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Logdata;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class KelurahanCon extends Controller
 {
@@ -13,9 +16,16 @@ class KelurahanCon extends Controller
      */
     public function index()
     {
-        $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
-        $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
-        return view('kelurahan', $data);
+        if (Auth::user()->status == 'admin') {
+            $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
+            $data['kelurahan'] = Kelurahan::orderBy('name', 'asc')->get();
+            return view('kelurahan', $data);
+        } elseif (Auth::user()->status == 'editor') {
+            $data['kecamatan'] = Kecamatan::orderBy('name', 'asc')->get();
+            $data['kelurahan'] = Kelurahan::where('id_kecamatan', Auth::user()->id_tugas)->orderBy('name', 'asc')->get();
+            return view('kelurahan', $data);
+        }
+        
     }
 
     public function fillkec($id)
@@ -43,6 +53,13 @@ class KelurahanCon extends Controller
         Kelurahan::create([
             'id_kecamatan' => $request->kec,
             'name' => $request->name,
+        ]);
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menambahkan Data Kelurahan '. $request->name . '',
         ]);
 
         // Redirect atau response setelah berhasil menyimpan data
@@ -74,6 +91,13 @@ class KelurahanCon extends Controller
             'name' => $request->name,
         ]);
 
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Mengupdate Data Kelurahan '. $request->name . '',
+        ]);
+
         // Redirect kembali ke halaman list item
         return redirect()->route('kelurahan')->with('success', 'Kelurahan berhasil diupdate');
     }
@@ -85,6 +109,13 @@ class KelurahanCon extends Controller
     {
         $item = Kelurahan::find($id);
         $item->delete();
+
+        $iduser = Auth::user()->id;
+
+        Logdata::create([
+            'id_user' => $iduser,
+            'aktivitas' => 'Menghapus Data Kelurahan '. $item->name . '',
+        ]);
 
         return redirect()->route('kelurahan')->with('success', 'Kelurahan berhasil dihapus');
     }
